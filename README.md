@@ -6,30 +6,32 @@ The corresponding Arduino code can be found [here](https://github.com/joshnewans
 
 ## Components
 
-The `serial_motor_demo` package consists of two nodes, `driver.py` and `gui.py`. The idea is that the driver can be run on an onboard PC inside a robot (e.g. a Raspberry Pi), interfacing with the lower-level hardware. The driver exposes motor control through ROS topics (see below), which are to be published by the user's software.
+The `controller` package consists of three nodes, `driver.py`, `odomTf.py` and `publsiherTest.py`. The idea is that the driver can be run on an onboard PC inside a robot (e.g. a Raspberry Pi), interfacing with the lower-level hardware. The driver exposes motor control through ROS topics (see below), which are to be published by the user's software.
 
-The GUI provides a simple interface for development and testing of such a system. It publishes and subscribes to the appropriate topics.
 
 
 ## Driver configuration & usage
 
 The driver has a few parameters:
 
-- `encoder_cpr` - Encoder counts per revolution
 - `loop_rate` - Execution rate of the *Arduino* code (see Arduino side documentation for details)
-- `serial_port` - Serial port to connect to (default `/dev/ttyUSB0`)
-- `baud_rate` - Serial baud rate (default `57600`)
+- `serial_port` - Serial port to connect to (default `/dev/ttyACM0`)
+- `baud_rate` - Serial baud rate (default `115200`)
 - `serial_debug` - Enables debugging of serial commands (default `false`)
+- `robot_simulation` - Enables simulation of the robot(Twist message will not be forwarded through serial) (default `false`)
 
 To run, e.g.
 ```
-ros2 run serial_motor_demo driver --ros-args -p encoder_cpr:=3440 -p loop_rate:=30 -p serial_port:=/dev/ttyUSB0 -p baud_rate:=57600
+ros2 run controller [Nodes]
+```
+Nodes are driver,odomTf, publisherTest
+
+for defined parameters run type following command (only for driver Node)
+```
+ros2 run controller driver --ros-args -p loop_rate:=30 -p serial_port:=/dev/ttyACM0 -p baud_rate:=115200 -p robot_simulation:=False
 ```
 
-It makes use of the following topics
-- `motor_command` - Subscribes a `MotorCommand`, in rads/sec for each of the two motors
-- `motor_vels` - Publishes a `MotorVels`, motor velocities in rads/sec
-- `encoder_vals` - Publishes an `EncoderVals`, raw encoder counts for each motor
+
 
 
 
