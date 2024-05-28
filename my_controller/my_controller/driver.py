@@ -4,7 +4,7 @@ from rclpy.node import Node
 # from msgsTemplate.msg import MotorVels
 # from msgsTemplate.msg import EncoderVals
 from geometry_msgs.msg import Twist
-
+from sensor_msgs.msg import LaserScan, Range
 
 import time
 import math
@@ -39,24 +39,48 @@ class MotorDriver(Node):
         self.robotSim =self.get_parameter('robot_simulation').value
         if (self.robotSim):
             print("Robot simulation enabled")
+        self.buffScan = [0 for i in range(3)]
+        self.scanMsg = LaserScan()
+        self.scanMsg.header.frame_id = "sonar_link"
+        self.scanMsg.angle_min = math.pi/4 - 0.05
+        self.scanMsg.angle_max = math.pi/4 + 0.05
+        self.scanMsg.angle_increment = 0.1
+        self.scanMsg.time_increment = 0.0
+        self.scanMsg.range_min = 0.05
+        self.scanMsg.range_max = 0.5
+
+        self.buffRange = [0 for i in range(3)]
+        self.rangeMsg = Range()
+        self.rangeMsg.header.frame_id = "sonar_link"
+        self.rangeMsg.radiation_type = 0
+        self.rangeMsg.min_range = 0.05
+        self.rangeMsg.max_range = 0.60
+        self.rangeMsg.field_of_view = 0.17   # 10deg
+
         # Setup topics & services
         self.subscription = self.create_subscription(
             Twist,
             'cmd_vel',
             self.motor_command_callback,
             10)
-        
+
+
+
         # Member Variables
         self.mutex = Lock()
         # Open serial comms
         if(self.robotSim == False):
             print(f"Connecting to port {self.serial_port} at {self.baud_rate}.")
             self.conn = serial.Serial(self.serial_port, self.baud_rate, timeout=1.0)
-            print(f"Connected to {self.conn}")
-        
+            print(f"Connected to {self.conn}") 
+            self.publisher = self.create_publisher(LaserScan,'scan', 10)
+            self.create_timer(0.1,self.scan_callback)
 
-    # Raw serial commands
+            self.publisher = self.create_publisher(Range,'range', 10)
+            self.create_timer(0.1,self.range_callback)
     
+    
+    # Raw serial commands
     def send_robot_vel_command(self, linear_vel, angular_vel):
         self.send_command(f"v {float(linear_vel)} {float(angular_vel)}")
 
@@ -76,21 +100,47 @@ class MotorDriver(Node):
     #uncoment below for using stepper motor
     # Twist.linear.x is linear robot speed, Twist.angular.z is angular robot speed
     def motor_command_callback(self,Twist):
-        if(Twist.linear.x or Twist.angular.z):
-            if(self.robotSim == False):
-                self.send_robot_vel_command(Twist.linear.x, Twist.angular.z)
+        # if(Twist.linear.x or Twist.angular.z):
+        if(self.robotSim == False):
+            self.send_robot_vel_command(Twist.linear.x, Twist.angular.z)
         ts = datetime.datetime.now()
     #Get the battery status
-        resp = int(self.send_command((f"g")))
         # print(len(resp))
-        Battery =(resp - 453) * 100  / (514 - 453)
-        print(str(ts)+' Battery ='+str(Battery)+'% =>'+str(Twist))
-        # # print(str(ts)+' => '+str(Twist))
+        if(self.robotSim == False):
+            resp = int(self.send_command((f"g")))
+            Battery =(resp - 453) * 100  / (514 - 453)
+            print(str(ts)+' Battery ='+str(Battery)+'% =>'+str(Twist))
+        else:
+            print(str(ts)+' => '+str(Twist))
     
     # Utility functions
+    def scan_callback(self):
+        self.buffScan[0]=self.buffScan[1]
+        self.buffScan[1]=self.buffScan[2]
+        self.buffScan[2]=float(self.send_command((f"h")))
+        if(self.buffScan[0] > 0.0 and self.buffScan[1] > 0.0 and self.buffScan[2] > 0.0):
+            self.scanMsg.ranges = [float(self.send_command((f"h"))) / 100]
+            self.scanMsg.header.stamp = Node.get_clock().now().to_msg()
+            self.publisher.publish(self.scanMsg)
+        else:
+            self.scanMsg.ranges = [0.0]
+            self.scanMsg.header.stamp = Node.get_clock().now().to_msg()
+            self.publisher.publish(self.scanMsg)
 
+    def range_callback(self):
+        self.buffRange[0]=self.buffRange[1]
+        self.buffRange[1]=self.buffRange[2]
+        self.buffRange[2]=float(self.send_command((f"h")))
+        if(self.buffRange[0] > 0.0 and self.buffRange[1] > 0.0 and self.buffRange[2] > 0.0):
+            self.rangeMsg.range = [float(self.send_command((f"h"))) / 100]
+            self.rangeMsg.header.stamp = Node.get_clock().now().to_msg()
+            self.publisher.publish(self.rangeMsg)
+        else:
+            self.rangeMsg.range = 0.0
+            self.rangeMsg.header.stamp = Node.get_clock().now().to_msg()
+            self.publisher.publish(self.rangeMsg)
+    
     def send_command(self, cmd_string):
-        
         self.mutex.acquire()
         try:
             cmd_string += "\r"

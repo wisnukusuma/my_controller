@@ -11,7 +11,6 @@ class PubTest(Node):
         super().__init__('publisherTest')
 
         self.publisher = self.create_publisher(Twist,'cmd_vel', 10)
-
         self.create_timer(0.1,self.send_motor_once)
 
     def send_motor_once(self):
