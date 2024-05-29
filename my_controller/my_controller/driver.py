@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 # from msgsTemplate.msg import MotorCommand
 # from msgsTemplate.msg import MotorVels
 # from msgsTemplate.msg import EncoderVals
@@ -13,6 +14,8 @@ from threading import Lock
 import datetime
 
 
+rangeMsg = Range()
+scanMsg = LaserScan()
 
 class MotorDriver(Node):
     def __init__(self):
@@ -39,23 +42,22 @@ class MotorDriver(Node):
         self.robotSim =self.get_parameter('robot_simulation').value
         if (self.robotSim):
             print("Robot simulation enabled")
-        self.buffScan = [0 for i in range(3)]
-        self.scanMsg = LaserScan()
-        self.scanMsg.header.frame_id = "sonar_link"
-        self.scanMsg.angle_min = math.pi/4 - 0.05
-        self.scanMsg.angle_max = math.pi/4 + 0.05
-        self.scanMsg.angle_increment = 0.1
-        self.scanMsg.time_increment = 0.0
-        self.scanMsg.range_min = 0.05
-        self.scanMsg.range_max = 0.5
+        
+        self.buffScan = [ 0.0 , 0.0 , 0.0]
+        scanMsg.header.frame_id = "sonar_link"
+        scanMsg.angle_min =  -0.25
+        scanMsg.angle_max =  0.0
+        scanMsg.angle_increment = 0.1
+        scanMsg.time_increment = 0.0
+        scanMsg.range_min = 0.05
+        scanMsg.range_max = 0.5
 
-        self.buffRange = [0 for i in range(3)]
-        self.rangeMsg = Range()
-        self.rangeMsg.header.frame_id = "sonar_link"
-        self.rangeMsg.radiation_type = 0
-        self.rangeMsg.min_range = 0.05
-        self.rangeMsg.max_range = 0.60
-        self.rangeMsg.field_of_view = 0.17   # 10deg
+        self.buffRange = [ 0.0 , 0.0 , 0.0]
+        rangeMsg.header.frame_id = "sonar_link"
+        rangeMsg.radiation_type = 0
+        rangeMsg.min_range = 0.05
+        rangeMsg.max_range = 0.60
+        rangeMsg.field_of_view = 0.17   # 10deg
 
         # Setup topics & services
         self.subscription = self.create_subscription(
@@ -73,11 +75,12 @@ class MotorDriver(Node):
             print(f"Connecting to port {self.serial_port} at {self.baud_rate}.")
             self.conn = serial.Serial(self.serial_port, self.baud_rate, timeout=1.0)
             print(f"Connected to {self.conn}") 
+          
             self.publisher = self.create_publisher(LaserScan,'scan', 10)
             self.create_timer(0.1,self.scan_callback)
 
-            self.publisher = self.create_publisher(Range,'range', 10)
-            self.create_timer(0.1,self.range_callback)
+            # self.publisher = self.create_publisher(Range,'range', 10)
+            # self.create_timer(1,self.range_callback)
     
     
     # Raw serial commands
@@ -115,30 +118,42 @@ class MotorDriver(Node):
     
     # Utility functions
     def scan_callback(self):
-        self.buffScan[0]=self.buffScan[1]
-        self.buffScan[1]=self.buffScan[2]
-        self.buffScan[2]=float(self.send_command((f"h")))
+        msgBuff = self.send_command(f"h")
+        if (msgBuff == ''):
+            return
+        else:
+            self.buffScan[0]=self.buffScan[1]
+            self.buffScan[1]=self.buffScan[2]
+            self.buffScan[2]= float(msgBuff)
+       
         if(self.buffScan[0] > 0.0 and self.buffScan[1] > 0.0 and self.buffScan[2] > 0.0):
-            self.scanMsg.ranges = [float(self.send_command((f"h"))) / 100]
-            self.scanMsg.header.stamp = Node.get_clock().now().to_msg()
-            self.publisher.publish(self.scanMsg)
-        else:
-            self.scanMsg.ranges = [0.0]
-            self.scanMsg.header.stamp = Node.get_clock().now().to_msg()
-            self.publisher.publish(self.scanMsg)
+            scanMsg.ranges = [self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100]
+            scanMsg.intensities = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+            # print(self.buffScan[2])
+            scanMsg.header.stamp = self.get_clock().now().to_msg()
 
-    def range_callback(self):
-        self.buffRange[0]=self.buffRange[1]
-        self.buffRange[1]=self.buffRange[2]
-        self.buffRange[2]=float(self.send_command((f"h")))
-        if(self.buffRange[0] > 0.0 and self.buffRange[1] > 0.0 and self.buffRange[2] > 0.0):
-            self.rangeMsg.range = [float(self.send_command((f"h"))) / 100]
-            self.rangeMsg.header.stamp = Node.get_clock().now().to_msg()
-            self.publisher.publish(self.rangeMsg)
+            self.publisher.publish(scanMsg)
         else:
-            self.rangeMsg.range = 0.0
-            self.rangeMsg.header.stamp = Node.get_clock().now().to_msg()
-            self.publisher.publish(self.rangeMsg)
+            scanMsg.ranges = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+            scanMsg.intensities = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+            scanMsg.header.stamp = self.get_clock().now().to_msg()
+            self.publisher.publish(scanMsg)
+
+# not used since lidar only use scan
+    def range_callback(self):
+        print(self.send_command(f"h"))
+        # self.buffRange[0]=self.buffRange[1]
+        # self.buffRange[1]=self.buffRange[2]
+        # self.buffRange[2]=float(self.send_command(f"h"))
+        # if(self.buffRange[0] > 0.0 and self.buffRange[1] > 0.0 and self.buffRange[2] > 0.0):
+        #     # rangeMsg.range = self.send_command(f"h") / 100
+        #     print(self.send_command(f"h"))
+        #     # self.rangeMsg.header.stamp = Time.now().to_msg()
+        #     # self.publisher.publish(rangeMsg)
+        # else:
+        #     rangeMsg.range = 0.0
+        #     # self.rangeMsg.header.stamp = Time.now().to_msg()
+        #     # self.publisher.publish(rangeMsg)
     
     def send_command(self, cmd_string):
         self.mutex.acquire()
