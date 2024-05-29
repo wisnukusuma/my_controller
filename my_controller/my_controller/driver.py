@@ -50,7 +50,7 @@ class MotorDriver(Node):
         scanMsg.angle_increment = 0.1
         scanMsg.time_increment = 0.0
         scanMsg.range_min = 0.05
-        scanMsg.range_max = 0.5
+        scanMsg.range_max = 2.0
 
         self.buffRange = [ 0.0 , 0.0 , 0.0]
         rangeMsg.header.frame_id = "sonar_link"
