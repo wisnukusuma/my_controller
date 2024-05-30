@@ -17,16 +17,13 @@ import datetime
 rangeMsg = Range()
 scanMsg = LaserScan()
 
-class MotorDriver(Node):
+class Sonar(Node):
     def __init__(self):
         super().__init__('motor_driver')
         # Setup parameters
-        self.declare_parameter('loop_rate', value=0)
-        if (self.get_parameter('loop_rate').value == 0):
-            print("WARNING! LOOP RATE SET TO 0!!")
-        self.led_pin_bootDone = 13
+        
 
-        self.declare_parameter('serial_port', value="/dev/ttyACM0")
+        self.declare_parameter('serial_port', value="/dev/ttyUSB1")
         self.serial_port = self.get_parameter('serial_port').value
 
 
@@ -43,13 +40,23 @@ class MotorDriver(Node):
         if (self.robotSim):
             print("Robot simulation enabled")
         
+        self.buffScan = [ 0.0 , 0.0 , 0.0]
+        scanMsg.header.frame_id = "sonar_link"
+        scanMsg.angle_min =  -0.25
+        scanMsg.angle_max =  0.0
+        scanMsg.angle_increment = 0.1
+        scanMsg.time_increment = 0.0
+        scanMsg.range_min = 0.05
+        scanMsg.range_max = 2.0
+
+        self.buffRange = [ 0.0 , 0.0 , 0.0]
+        rangeMsg.header.frame_id = "sonar_link"
+        rangeMsg.radiation_type = 0
+        rangeMsg.min_range = 0.05
+        rangeMsg.max_range = 0.60
+        rangeMsg.field_of_view = 0.17   # 10deg
 
         # Setup topics & services
-        self.subscription = self.create_subscription(
-            Twist,
-            'cmd_vel',
-            self.motor_command_callback,
-            10)
 
 
 
@@ -61,41 +68,19 @@ class MotorDriver(Node):
             self.conn = serial.Serial(self.serial_port, self.baud_rate, timeout=1.0)
             print(f"Connected to {self.conn}") 
           
+            self.publisher = self.create_publisher(LaserScan,'scan', 10)
+            self.create_timer(0.1,self.scan_callback)
+
+            # self.publisher = self.create_publisher(Range,'range', 10)
+            # self.create_timer(1,self.range_callback)
     
     
-    # Raw serial commands
-    def send_robot_vel_command(self, linear_vel, angular_vel):
-        self.send_command(f"v {float(linear_vel)} {float(angular_vel)}")
 
-
-
-    # def send_encoder_read_command(self):
-    #     resp = self.send_command(f"e")
-    #     if resp:
-    #         return [int(raw_enc) for raw_enc in resp.split()]
-    #     return []
-    
     
     def map(x, in_min, in_max, out_min, out_max):
         out = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
         return out 
-    # More user-friendly functions
-    #uncoment below for using stepper motor
-    # Twist.linear.x is linear robot speed, Twist.angular.z is angular robot speed
-    def motor_command_callback(self,Twist):
-        # if(Twist.linear.x or Twist.angular.z):
-        if(self.robotSim == False):
-            self.send_robot_vel_command(Twist.linear.x, Twist.angular.z)
-        ts = datetime.datetime.now()
-    #Get the battery status
-        # print(len(resp))
-        if(self.robotSim == False):
-            resp = int(self.send_command((f"g")))
-            Battery =(resp - 453) * 100  / (514 - 453)
-            print(str(ts)+' Battery ='+str(Battery)+'% =>'+str(Twist))
-        else:
-            print(str(ts)+' => '+str(Twist))
-    
+
     # Utility functions
     def scan_callback(self):
         msgBuff = self.send_command(f"h")
@@ -119,7 +104,7 @@ class MotorDriver(Node):
             scanMsg.header.stamp = self.get_clock().now().to_msg()
             self.publisher.publish(scanMsg)
 
-    
+
     def send_command(self, cmd_string):
         self.mutex.acquire()
         try:
@@ -155,16 +140,16 @@ def main(args=None):
     
     rclpy.init(args=args)
 
-    motor_driver = MotorDriver()
+    sonar = Sonar()
 
-    rate = motor_driver.create_rate(30)
+    rate = sonar.create_rate(30)
     while rclpy.ok():
-        rclpy.spin_once(motor_driver)
-        # motor_driver.check_encoders()
+        rclpy.spin_once(sonar)
+        
 
 
-    motor_driver.close_conn()
-    motor_driver.destroy_node()
+    sonar.close_conn()
+    sonar.destroy_node()
     rclpy.shutdown()
 
 

@@ -24,7 +24,8 @@ setup(
         'console_scripts': [
             'odomTf = my_controller.odomTf:main',
             'publisherTest = my_controller.publisherTest:main',
-            'driver = my_controller.driver:main'
+            'driver = my_controller.driver:main',
+            'sonar = my_controller.sonar:main'
         ],
     },
     #  data_files=[
