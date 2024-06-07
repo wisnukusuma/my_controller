@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.time import Time
+from rclpy.time import Time 
 # from msgsTemplate.msg import MotorCommand
 # from msgsTemplate.msg import MotorVels
 # from msgsTemplate.msg import EncoderVals
@@ -13,17 +13,17 @@ import serial
 from threading import Lock
 import datetime
 
-
+start = Time()
 rangeMsg = Range()
 scanMsg = LaserScan()
 
 class Sonar(Node):
     def __init__(self):
-        super().__init__('motor_driver')
+        super().__init__('sonar_driver')
         # Setup parameters
         
 
-        self.declare_parameter('serial_port', value="/dev/ttyUSB1")
+        self.declare_parameter('serial_port', value="/dev/ttyUSB0")
         self.serial_port = self.get_parameter('serial_port').value
 
 
@@ -94,7 +94,7 @@ class Sonar(Node):
         if(self.buffScan[0] > 0.0 and self.buffScan[1] > 0.0 and self.buffScan[2] > 0.0):
             scanMsg.ranges = [self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100]
             scanMsg.intensities = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
-            # print(self.buffScan[2])
+            # print(self.get_clock().now().to_msg())
             scanMsg.header.stamp = self.get_clock().now().to_msg()
 
             self.publisher.publish(scanMsg)
