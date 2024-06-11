@@ -42,8 +42,8 @@ class Sonar(Node):
         
         self.buffScan = [ 0.0 , 0.0 , 0.0]
         scanMsg.header.frame_id = "sonar_link"
-        scanMsg.angle_min =  -0.25
-        scanMsg.angle_max =  0.0
+        scanMsg.angle_min =  -0.125
+        scanMsg.angle_max =  0.125
         scanMsg.angle_increment = 0.1
         scanMsg.time_increment = 0.0
         scanMsg.range_min = 0.05
@@ -92,15 +92,15 @@ class Sonar(Node):
             self.buffScan[2]= float(msgBuff)
        
         if(self.buffScan[0] > 0.0 and self.buffScan[1] > 0.0 and self.buffScan[2] > 0.0):
-            scanMsg.ranges = [self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100]
-            scanMsg.intensities = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+            scanMsg.ranges = [self.buffScan[0] / 100,self.buffScan[0] / 100,self.buffScan[0] / 100,]
+            scanMsg.intensities = [0.0 , 0.0 , 0.0 ]
             # print(self.get_clock().now().to_msg())
             scanMsg.header.stamp = self.get_clock().now().to_msg()
 
             self.publisher.publish(scanMsg)
         else:
-            scanMsg.ranges = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
-            scanMsg.intensities = [0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0]
+            scanMsg.ranges = [0.0 , 0.0 , 0.0 ]
+            scanMsg.intensities = [0.0 , 0.0 , 0.0 ]
             scanMsg.header.stamp = self.get_clock().now().to_msg()
             self.publisher.publish(scanMsg)
 
