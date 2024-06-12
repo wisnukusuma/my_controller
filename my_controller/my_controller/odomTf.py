@@ -110,7 +110,7 @@ class FramePublisher(Node):
         self.th = 0.0
         self.dx = 0.0  # speeds in x/rotation
         self.dr = 0.0
-        self.then = self.get_clock().now()
+        
 
         #Motor Specification
         self.motorStep = 6400
@@ -140,6 +140,8 @@ class FramePublisher(Node):
             self.speedUpdate,
             10)
         self.subscription  # prevent unused variable warning
+        self.then = self.get_clock().now()
+        
     def speedUpdate(self, msg): 
         self.linVel= msg.linear.x
         self.angVel=msg.angular.z
