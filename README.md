@@ -6,7 +6,7 @@ The corresponding Arduino code can be found [here](https://github.com/joshnewans
 
 ## Components
 
-The `controller` package consists of three nodes, `driver.py`, `odomTf.py` and `publsiherTest.py`. The idea is that the driver can be run on an onboard PC inside a robot (e.g. a Raspberry Pi), interfacing with the lower-level hardware. The driver exposes motor control through ROS topics (see below), which are to be published by the user's software.
+The `controller` package consists of three nodes, `driver.py`, `odomTf.py`,`sonar.py` and `publsiherTest.py`. The idea is that the driver can be run on an onboard PC inside a robot (e.g. a Raspberry Pi), interfacing with the lower-level hardware. The driver exposes motor control through ROS topics (see below), which are to be published by the user's software.
 
 
 
