@@ -110,13 +110,14 @@ class FramePublisher(Node):
         self.th = 0.0
         self.dx = 0.0  # speeds in x/rotation
         self.dr = 0.0
-        
+        self.lVel =0.0
+        self.aVel =0.0 
 
         #Motor Specification
         self.motorStep = 6400
         self.wheelCirc = 21.5
-        self.MAXIMUM_SPEED = 20 # cm/s
-        self.MINIMUM_SPEED = 2 # cm/s
+        self.MAXIMUM_SPEED = 5.0 # cm/s
+        self.MINIMUM_SPEED = 2.0 # cm/s
 
         self.ANG_MAXIMUM_SPEED = 2.0 # rad/s
         # subscriptions
@@ -213,28 +214,33 @@ class FramePublisher(Node):
                     else:
                         self.speedL=self.MAXIMUM_SPEED 
             
-            lVel = 0.0
+            
             if(self.linVel != 0):
                 if(abs(self.linVel)<self.MINIMUM_SPEED):
                     if(self.linVel<0):
-                        lVel=-self.MINIMUM_SPEED
+                        self.lVel=-self.MINIMUM_SPEED
                     else:
-                        lVel=self.MINIMUM_SPEED
+                        self.lVel=self.MINIMUM_SPEED
                 elif(abs(self.linVel)>self.MAXIMUM_SPEED):
                     if(self.linVel<0):
-                        lVel=-self.MAXIMUM_SPEED
+                        self.lVel=-self.MAXIMUM_SPEED
                     else:
-                        lVel=self.MAXIMUM_SPEED
+                        self.lVel=self.MAXIMUM_SPEED
+                else:
+                    self.lVel = self.linVel; 
+            else:
+                self.lVel = 0.0
 
-            aVel = 0.0
             if(self.angVel != 0):
                 if(abs(self.angVel)>self.MAXIMUM_SPEED):
                     if(self.angVel<0):
-                        aVel=-self.ANG_MAXIMUM_SPEED
+                        self.aVel=-self.ANG_MAXIMUM_SPEED
                     else:
-                        aVel=self.ANG_MAXIMUM_SPEED 
+                        self.aVel=self.ANG_MAXIMUM_SPEED 
                 else:
-                    aVel = self.angVel  
+                    self.aVel = self.angVel
+            else:
+                self.aVel = 0.0  
 
             
             numStepR=self.speedR*(self.motorStep/self.wheelCirc)
@@ -272,7 +278,7 @@ class FramePublisher(Node):
             # self.enc_right = self.rwheel
 
             # distance traveled is the average of the two wheels 
-            d = ( self.rwheel + self.lwheel) / 2
+            # d = ( self.rwheel + self.lwheel) / 2
             # this approximation works (in radians) for small angles
             # th = (self.rwheel - self.lwheel) / self.base_width
             # calculate velocities
@@ -283,14 +289,14 @@ class FramePublisher(Node):
             self.dr = self.angVel
 
 
-            self.th = self.th + (aVel/10.0)  
-            x = cos(self.th) * (lVel/100.0)
-            y = sin(self.th) * (lVel/100.0)
+            self.th = self.th + (self.aVel/10.0)  
+            x = cos(self.th) * (self.lVel/100.0)
+            y = sin(self.th) * (self.lVel/100.0)
                 
             # calculate the final position of the robot
             self.x = self.x + x
             self.y = self.y + y
-
+            #print("x = %d, y = %d "% (self.x, self.y)) 
             # if d != 0:
             #     # calculate distance traveled in x and y
             #     x = cos(aVel) * (lVel/100.0)
@@ -302,8 +308,8 @@ class FramePublisher(Node):
             # if th != 0:
             #     self.th = self.th + aVel
             
-            # print("Linear= "+str(self.linVel)+" ,Angular= "+str(self.th))
-            # print("x= "+str(self.x)+" ,y= "+str(self.y))
+            print("Linear= "+str(self.lVel)+" ,Angular= "+str(self.aVel))
+            print("x= "+str(self.x)+" ,y= "+str(self.y)+" theta="+str(self.th))
 
             # publish the odom information
             quaternion = Quaternion()
